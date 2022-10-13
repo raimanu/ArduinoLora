@@ -5,9 +5,9 @@
 */
 
 #include <MKRWAN.h>
-LoRaModem modem;
-
-#include <Wire.h>    
+#include <Wire.h>
+#include <ArduinoLowPower.h>
+LoRaModem modem; 
 #define address 100   // adresse I2C EC Cond
 
 /// Declaration paramètres LoraWan
@@ -127,5 +127,5 @@ void loop() {
     Serial.println("(you may send a limited amount of messages per minute, depending on the signal strength");
     Serial.println("it may vary from 1 message every couple of seconds to 1 message every minute)");
   }
-  delay(2000 * 60);
+  LowPower.deepSleep(2000 * 60);
 }
