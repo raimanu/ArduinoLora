@@ -1,2 +1,2 @@
 # ArduinoLora
-Projet capteur de Mangrove avec LoraWan
+Projet capteur en Mangrove avec LoraWan
