@@ -128,4 +128,5 @@ void loop() {
     Serial.println("it may vary from 1 message every couple of seconds to 1 message every minute)");
   }
   LowPower.deepSleep(2000 * 60);
+  setup();
 }
