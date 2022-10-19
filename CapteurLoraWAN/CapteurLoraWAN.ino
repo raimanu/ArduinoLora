@@ -1,6 +1,9 @@
 #include <MKRWAN.h>
 #include <Wire.h>
 #include <ArduinoLowPower.h>
+#include <SD.h>
+#include <SPI.h>
+
 #include "Key.h"
 #define addressEC 100   // adresse I2C EC Conductivite
 #define addressPh 99    // adresse I2C Ph
@@ -18,6 +21,12 @@ const int capteurLuminosite = A2;       // luminosité : A2
 // Capteur ULtrasons broche Trigg et Echo
 const byte TRIGGER_PIN = 2;
 const byte ECHO_PIN = 3;
+
+// Variables utilisées pour la carte SD
+const int   sdCardPinChipSelect = 6;
+const char* ErrorLogFileName = "log.txt";
+File DataLog;
+File ErrorLog;
 
 byte codeError = 0;       // code erreur sondes Atlas
 char reponse[48];    // réponse des sondes Atlas (48 octets)
@@ -59,6 +68,8 @@ void setup() {
 
   //Initialisation EC Cond  
    Wire.begin();                 // Initialisation du port I2C
+
+   SD.begin(sdCardPinChipSelect);
 }
 
 String requestSondeAtlas(int addrSonde) {
@@ -79,7 +90,7 @@ String requestSondeAtlas(int addrSonde) {
       break;
     }
   }
-  return String(reponse);
+  return String(reponse).substring(0,4);
 }
 
 void sleepEC(){
@@ -96,28 +107,33 @@ void sleepPH(){
 
 void loop() {
 
+  modem.setPort(3);
+  modem.beginPacket();
+
   //------ Mesure temperature Eau (sonde Atlas)------//
   float temperatureEau = analogRead(capteurTemperatureEau); // Valeur en sortie du convertisseur A/N
   temperatureEau = 3.3/1023*temperatureEau*1000;      // Tension en mV à l'entrée du convertisseur
   temperatureEau = (0.0512*temperatureEau)-20.5128;         // Formule de calcul issue de la documentation technique
-  messageLora = "TE:" + String(temperatureEau) + "/";
+  modem.print(String(temperatureEau) + "/");
 
   //------ Mesure temperature Air TMP36 ------//
   float temperatureAir = analogRead(capteurTemperatureAir); // Valeur brute en sortie du convertisseur A/N
   temperatureAir = 3.3/1023*temperatureAir;           // Tension en V à l'entrée du convertisseur (règle de 3)
   temperatureAir =((temperatureAir*1000)-500)/10;     // Formule de calcul issue de la documentation technique
-  messageLora += "TA:" + String(temperatureAir) + "/";
+  modem.print(String(temperatureAir) + "/");
 
   int luminosite = analogRead(capteurLuminosite);    // Valeur en sortie du convertisseur A/N
-  messageLora += "L:" + String(luminosite) + "/";
+  modem.print(String(luminosite) + "/");
 
   //------ Commande carte Atlas EC ------//
-  
-  messageLora += "EC:" + requestSondeAtlas(addressEC).substring(0,4) + "/";
+
+  String ec = requestSondeAtlas(addressEC);
+  modem.print(ec + "/");
 
   //------ Commande carte Atlas Ph ------//
 
-  messageLora += "Ph:" + requestSondeAtlas(addressPh).substring(0,4) + "/";
+  String ph = requestSondeAtlas(addressPh);
+  modem.print(ph + "/");
 
   //------ Mesure distance capteur ultrasons -------//
 
@@ -126,15 +142,12 @@ void loop() {
   digitalWrite(TRIGGER_PIN, LOW);
   long measure = pulseIn(ECHO_PIN, HIGH, 25000UL);
   float distance_cm = (measure * 0.34 / 2.0)/ 10.0;
-  messageLora += "H:" + String(distance_cm);
+  modem.print(String(distance_cm));
 
   Serial.println("Taille message : " + String(messageLora.length()));
   Serial.println(messageLora);
   //------ Transmission LoRaWAN ------//
 
-  modem.setPort(3);
-  modem.beginPacket();
-  modem.print(messageLora);
   int err = modem.endPacket(true);
   if (err > 0) {
     Serial.println("Message envoyé correctement!");
@@ -142,8 +155,27 @@ void loop() {
     Serial.println("Erreur envoi message");
   }
 
+  //------ DataLogger ------//
+
+  DataLog = SD.open("dataLog.csv", FILE_WRITE);
+  if (DataLog) {
+    Serial.println("Enregistrement Carte SD");
+    DataLog.print(temperatureEau);
+    DataLog.print(";");
+    DataLog.print(temperatureAir);
+    DataLog.print(";");
+    DataLog.print(luminosite);
+    DataLog.print(";");
+    DataLog.print(ec);
+    DataLog.print(";");
+    DataLog.print(ph);
+    DataLog.print(";");
+    DataLog.println(distance_cm);
+    DataLog.close();     
+  }
   //------ Mise en Veille ------//
 
+  modem.sleep();
   sleepEC();
   sleepPH();
   //LowPower.deepSleep(2000 * 60);
