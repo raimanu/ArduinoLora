@@ -30,8 +30,6 @@ File ErrorLog;
 
 // Variables utlisées pour le RTC
 RTC_PCF8523 rtc;
-String date;
-String heure;
 
 byte codeError = 0;       // code erreur sondes Atlas
 char reponse[48];    // réponse des sondes Atlas (48 octets)
@@ -53,6 +51,7 @@ void setup() {
   if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
     Serial.flush();
+    errorLogger("Couldn't find RTC");
     while (1) delay(10);
   }
 
@@ -67,31 +66,26 @@ void setup() {
   pinMode(ECHO_PIN, INPUT);
 
   //------- Connection au réseau LoraWan UNC
-  
   if (!modem.begin(EU868)) {
-    Serial.println("Failed to start module");
+    errorLogger("Failed to start module");
     while (1) {}
   }
 
-  Serial.print("La version de votre module est : ");
-  Serial.println(modem.version());
-  if (modem.version() != ARDUINO_FW_VERSION) {
-    Serial.println("Vérifié que la dernière version du firmware est installé.");
-    Serial.println("Pour mettre à jour le firmwaire installé 'MKRWANFWUpdate_standalone.ino' sketch.");
-  }
-  Serial.print("Votre device EUI est : ");
-  Serial.println(modem.deviceEUI());
+  errorLogger(String("Setup : version du module : " + modem.version()));
+  errorLogger(String("Setup : device EUI : " + modem.deviceEUI()));
 
+  devAddr.trim();
+  nwkSKey.trim();
+  appSKey.trim();
   int connected = modem.joinABP(devAddr, nwkSKey, appSKey);
   if (!connected) {
-    Serial.println("Quelque chose ne vas pas ; êtes vous à l'intérieur ? Allez prés d'une fenêtre et réessayer");
+    errorLogger("Erreur de connexion, réesayer");
     while (1) {}
   }
   modem.minPollInterval(60);
 
   //Initialisation EC Cond  
-   Wire.begin();                 // Initialisation du port I2C
-
+  Wire.begin();                 // Initialisation du port I2C
 }
 
 String requestSondeAtlas(int addrSonde) {
@@ -119,11 +113,8 @@ void errorLogger(String error){
   ErrorLog = SD.open("Log.txt", FILE_WRITE);
   if (ErrorLog) {
     DateTime now = rtc.now();
-    date = String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()));
-    heure = String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second());
-    ErrorLog.print(date);
-    ErrorLog.print(" ");
-    ErrorLog.print(heure);
+    ErrorLog.print(String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()) + ' '));
+    ErrorLog.print(String(String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second())));
     ErrorLog.print("-->");
     ErrorLog.println(error);
     ErrorLog.close();
@@ -143,7 +134,6 @@ void sleepPH(){
 }
 
 void loop() {
-
   modem.setPort(3);
   modem.beginPacket();
 
@@ -163,17 +153,14 @@ void loop() {
   modem.print(String(luminosite) + "/");
 
   //------ Commande carte Atlas EC ------//
-
   String ec = requestSondeAtlas(addressEC);
   modem.print(ec + "/");
 
   //------ Commande carte Atlas Ph ------//
-
   String ph = requestSondeAtlas(addressPh);
   modem.print(ph + "/");
 
   //------ Mesure distance capteur ultrasons -------//
-
   digitalWrite(TRIGGER_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIGGER_PIN, LOW);
@@ -182,28 +169,22 @@ void loop() {
   modem.print(String(distance_cm));
 
   //------ Transmission LoRaWAN ------//
- 
   int err = modem.endPacket(true);
   if (err > 0) {
     Serial.println("Message envoyé correctement!");
-    errorLogger("Succes: envoi trame LoRa");
+    errorLogger("Success: envoi trame LoRa");
   } else {
     Serial.println("Erreur envoi message");
     errorLogger("Error: envoi trame LoRa");
   }
 
   //------ DataLogger ------//
-
   DataLog = SD.open("dataLog.csv", FILE_WRITE);
   if (DataLog) {
     Serial.println("Enregistrement Carte SD");
     DateTime now = rtc.now();
-    date = String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()));
-    heure = String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second());
-    DataLog.print(date);
-    DataLog.print(";");
-    DataLog.print(heure);
-    DataLog.print(";");
+    DataLog.print(String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()) + ';'));
+    DataLog.print(String(String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second()) + ';'));
     DataLog.print(temperatureEau);
     DataLog.print(";");
     DataLog.print(temperatureAir);
@@ -219,7 +200,6 @@ void loop() {
   }
 
   //------ Mise en Veille ------//
-
   modem.sleep();
   sleepEC();
   sleepPH();
