@@ -1,8 +1,9 @@
 #include <MKRWAN.h>
 #include <Wire.h>
 #include <ArduinoLowPower.h>
+#include <RTClib.h>
 #include <SD.h>
-#include <SPI.h>
+//#include <SPI.h>
 
 #include "Key.h"
 #define addressEC 100   // adresse I2C EC Conductivite
@@ -24,9 +25,13 @@ const byte ECHO_PIN = 3;
 
 // Variables utilisées pour la carte SD
 const int   sdCardPinChipSelect = 6;
-const char* ErrorLogFileName = "log.txt";
 File DataLog;
 File ErrorLog;
+
+// Variables utlisées pour le RTC
+RTC_PCF8523 rtc;
+String date;
+String heure;
 
 byte codeError = 0;       // code erreur sondes Atlas
 char reponse[48];    // réponse des sondes Atlas (48 octets)
@@ -34,9 +39,31 @@ char reponse[48];    // réponse des sondes Atlas (48 octets)
 void setup() {
   Serial.begin(9600);
 
+  /* Initialise Carte SD*/
+  SD.begin(sdCardPinChipSelect);
+  if (!SD.exists("dataLog.csv")) {
+    DataLog = SD.open("dataLog.csv", FILE_WRITE);
+    if (DataLog) {
+      DataLog.println("Date;Heure;TempEau;TempAir;Lum;Ec;Ph;Hauteur");
+      DataLog.close();     
+    }
+  }
+
+  /* Initialise RTC */
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    while (1) delay(10);
+  }
+
+  if (! rtc.initialized() || rtc.lostPower()) {
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+   }
+  rtc.start();
+
   /* Initialise les broches */
   pinMode(TRIGGER_PIN, OUTPUT);
-  digitalWrite(TRIGGER_PIN, LOW); // La broche TRIGGER doit être à LOW au repos
+  digitalWrite(TRIGGER_PIN, LOW);
   pinMode(ECHO_PIN, INPUT);
 
   //------- Connection au réseau LoraWan UNC
@@ -44,7 +71,8 @@ void setup() {
   if (!modem.begin(EU868)) {
     Serial.println("Failed to start module");
     while (1) {}
-  };
+  }
+
   Serial.print("La version de votre module est : ");
   Serial.println(modem.version());
   if (modem.version() != ARDUINO_FW_VERSION) {
@@ -59,17 +87,11 @@ void setup() {
     Serial.println("Quelque chose ne vas pas ; êtes vous à l'intérieur ? Allez prés d'une fenêtre et réessayer");
     while (1) {}
   }
-
-  // Regler intervalle à 60 sec
   modem.minPollInterval(60);
-  // NOTE: independent de ce parametre, le modem n'envoie
-  // pas plus de deux messages toutes les 2 minutes,
-  // c'est restreint par le firmware et ne peux être changé.
 
   //Initialisation EC Cond  
    Wire.begin();                 // Initialisation du port I2C
 
-   SD.begin(sdCardPinChipSelect);
 }
 
 String requestSondeAtlas(int addrSonde) {
@@ -91,6 +113,21 @@ String requestSondeAtlas(int addrSonde) {
     }
   }
   return String(reponse).substring(0,4);
+}
+
+void errorLogger(String error){
+  ErrorLog = SD.open("Log.txt", FILE_WRITE);
+  if (ErrorLog) {
+    DateTime now = rtc.now();
+    date = String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()));
+    heure = String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second());
+    ErrorLog.print(date);
+    ErrorLog.print(" ");
+    ErrorLog.print(heure);
+    ErrorLog.print("-->");
+    ErrorLog.println(error);
+    ErrorLog.close();
+  }
 }
 
 void sleepEC(){
@@ -144,15 +181,15 @@ void loop() {
   float distance_cm = (measure * 0.34 / 2.0)/ 10.0;
   modem.print(String(distance_cm));
 
-  Serial.println("Taille message : " + String(messageLora.length()));
-  Serial.println(messageLora);
   //------ Transmission LoRaWAN ------//
-
+ 
   int err = modem.endPacket(true);
   if (err > 0) {
     Serial.println("Message envoyé correctement!");
+    errorLogger("Succes: envoi trame LoRa");
   } else {
     Serial.println("Erreur envoi message");
+    errorLogger("Error: envoi trame LoRa");
   }
 
   //------ DataLogger ------//
@@ -160,6 +197,13 @@ void loop() {
   DataLog = SD.open("dataLog.csv", FILE_WRITE);
   if (DataLog) {
     Serial.println("Enregistrement Carte SD");
+    DateTime now = rtc.now();
+    date = String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()));
+    heure = String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second());
+    DataLog.print(date);
+    DataLog.print(";");
+    DataLog.print(heure);
+    DataLog.print(";");
     DataLog.print(temperatureEau);
     DataLog.print(";");
     DataLog.print(temperatureAir);
@@ -173,6 +217,7 @@ void loop() {
     DataLog.println(distance_cm);
     DataLog.close();     
   }
+
   //------ Mise en Veille ------//
 
   modem.sleep();
