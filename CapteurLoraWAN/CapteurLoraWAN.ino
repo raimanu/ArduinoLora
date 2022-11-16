@@ -1,11 +1,6 @@
-#include <MKRWAN.h>
-#include <Wire.h>
-#include <ArduinoLowPower.h>
-#include <RTClib.h>
-#include <SD.h>
-//#include <SPI.h>
-
+#include "Extension.h"
 #include "Key.h"
+
 #define addressEC 100   // adresse I2C EC Conductivite
 #define addressPh 99    // adresse I2C Ph
 
@@ -35,7 +30,7 @@ byte codeError = 0;       // code erreur sondes Atlas
 char reponse[48];    // réponse des sondes Atlas (48 octets)
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(9600); //DEBUG
 
   /* Initialise Carte SD*/
   SD.begin(sdCardPinChipSelect);
@@ -49,7 +44,7 @@ void setup() {
 
   /* Initialise RTC */
   if (! rtc.begin()) {
-    Serial.println("Couldn't find RTC");
+    Serial.println("Couldn't find RTC"); //DEBUG
     Serial.flush();
     errorLogger("Couldn't find RTC");
     while (1) delay(10);
@@ -79,6 +74,7 @@ void setup() {
   appSKey.trim();
   int connected = modem.joinABP(devAddr, nwkSKey, appSKey);
   if (!connected) {
+    Serial.println("Erreur de connexion, réessayer"); //DEBUG
     errorLogger("Erreur de connexion, réesayer");
     while (1) {}
   }
@@ -121,14 +117,8 @@ void errorLogger(String error){
   }
 }
 
-void sleepEC(){
-  Wire.beginTransmission(addressEC);
-  Wire.write("SLEEP");
-  Wire.endTransmission();
-}
-
-void sleepPH(){
-  Wire.beginTransmission(addressPh);
+void sleepAtlas(int addrSonde){
+  Wire.beginTransmission(addrSonde);
   Wire.write("SLEEP");
   Wire.endTransmission();
 }
@@ -136,29 +126,40 @@ void sleepPH(){
 void loop() {
   modem.setPort(3);
   modem.beginPacket();
+  tabData dataTab;
 
   //------ Mesure temperature Eau (sonde Atlas)------//
   float temperatureEau = analogRead(capteurTemperatureEau); // Valeur en sortie du convertisseur A/N
   temperatureEau = 3.3/1023*temperatureEau*1000;      // Tension en mV à l'entrée du convertisseur
   temperatureEau = (0.0512*temperatureEau)-20.5128;         // Formule de calcul issue de la documentation technique
-  modem.print(String(temperatureEau) + "/");
+  //modem.print(String(temperatureEau) + "/");
+  dataTab.tempEau = temperatureEau;
+  Serial.println(temperatureEau); //DEBUG
 
   //------ Mesure temperature Air TMP36 ------//
   float temperatureAir = analogRead(capteurTemperatureAir); // Valeur brute en sortie du convertisseur A/N
   temperatureAir = 3.3/1023*temperatureAir;           // Tension en V à l'entrée du convertisseur (règle de 3)
   temperatureAir =((temperatureAir*1000)-500)/10;     // Formule de calcul issue de la documentation technique
-  modem.print(String(temperatureAir) + "/");
+  //modem.print(String(temperatureAir) + "/");
+  dataTab.tempAir = temperatureAir;
+  Serial.println(temperatureAir); //DEBUG
 
   int luminosite = analogRead(capteurLuminosite);    // Valeur en sortie du convertisseur A/N
-  modem.print(String(luminosite) + "/");
+  //modem.print(String(luminosite) + "/");
+  dataTab.Lum = luminosite;
+  Serial.println(luminosite); //DEBUG
 
   //------ Commande carte Atlas EC ------//
   String ec = requestSondeAtlas(addressEC);
-  modem.print(ec + "/");
+  //modem.print(ec + "/");
+  dataTab.Ec = ec.toInt();
+  Serial.println(ec); //DEBUG
 
   //------ Commande carte Atlas Ph ------//
   String ph = requestSondeAtlas(addressPh);
-  modem.print(ph + "/");
+  //modem.print(ph + "/");
+  dataTab.pH = ph.toInt();
+  Serial.println(ph); //DEBUG
 
   //------ Mesure distance capteur ultrasons -------//
   digitalWrite(TRIGGER_PIN, HIGH);
@@ -166,9 +167,12 @@ void loop() {
   digitalWrite(TRIGGER_PIN, LOW);
   long measure = pulseIn(ECHO_PIN, HIGH, 25000UL);
   float distance_cm = (measure * 0.34 / 2.0)/ 10.0;
-  modem.print(String(distance_cm));
+  //modem.print(String(distance_cm));
+  dataTab.hauteur = distance_cm;
+  Serial.println(distance_cm); //DEBUG
 
   //------ Transmission LoRaWAN ------//
+  modem.write(dataTab);
   int err = modem.endPacket(true);
   if (err > 0) {
     Serial.println("Message envoyé correctement!");
@@ -201,8 +205,8 @@ void loop() {
 
   //------ Mise en Veille ------//
   modem.sleep();
-  sleepEC();
-  sleepPH();
+  sleepAtlas(addressEC);
+  sleepAtlas(addressPh);
   //LowPower.deepSleep(2000 * 60);
   //setup();
   delay(2000*60);

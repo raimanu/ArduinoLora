@@ -1,0 +1,16 @@
+function Decode(fports, bytes, variables){
+    var decoded = {};
+    var protversion = bytes[0];
+    switch (protversion){
+        case 0x01:
+            decoded.protversion = protversion;
+            decoded.tempAir = ((bytes[3]<<8)|bytes[2])/10.0;
+            decoded.tempWater = ((bytes[5]<<8)|bytes[4])/10.0;
+            decoded.ec = ((bytes[7]<<8)|bytes[6]);
+            decoded.pH = ((bytes[9]<<8)|bytes[8])/10.0;
+            decoded.lum = ((bytes[11]<<8)|bytes[10])/10.0;
+            decoded.height = ((bytes[13]<<8)|bytes[12]);
+            break;
+    }
+    return decoded;
+}
