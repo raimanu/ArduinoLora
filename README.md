@@ -11,4 +11,7 @@ Projet capteur en Mangrove avec LoraWan
  ``StructureData.ino`` : Structure de données arduino avec données fictives  
  ``decodeData.txt`` : Fonction qui decode la structure dans le serveur ChirpStack
  
+ ### SondeAtlas
+ ``SondeAtlas.ino`` : Code Arduino pour envoyer des commandes dans la sonde à partir du port série
+ 
  
