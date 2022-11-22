@@ -127,6 +127,7 @@ void loop() {
   modem.setPort(3);
   modem.beginPacket();
   tabData dataTab;
+  dataTab.prot = 0x01;
 
   //------ Mesure temperature Eau (sonde Atlas)------//
   float temperatureEau = analogRead(capteurTemperatureEau); // Valeur en sortie du convertisseur A/N
