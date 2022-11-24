@@ -37,7 +37,7 @@ void setup() {
   if (!SD.exists("dataLog.csv")) {
     DataLog = SD.open("dataLog.csv", FILE_WRITE);
     if (DataLog) {
-      DataLog.println("Date;Heure;TempEau;TempAir;Lum;Ec;Ph;Hauteur");
+      DataLog.println("Date;Heure;TempEau;TempAir;Lum;Ec;Salinité;Ph;Hauteur");
       DataLog.close();     
     }
   }
@@ -84,7 +84,7 @@ void setup() {
   Wire.begin();                 // Initialisation du port I2C
 }
 
-String requestSondeAtlas(int addrSonde) {
+char* requestSondeAtlas(int addrSonde, int dataType) {
   Wire.beginTransmission(addrSonde);  // activation du composant d'adresse "address" avant transmission (protocole I2C)
   Wire.write("r");                  // demande d'une mesure unitaire sur la sonde Atlas Scientific 
   Wire.endTransmission();
@@ -102,7 +102,19 @@ String requestSondeAtlas(int addrSonde) {
       break;
     }
   }
-  return String(reponse).substring(0,4);
+  if (addrSonde == addressEC) {
+  char * conductivity = strtok(reponse, ",");
+  char * salinity = strtok(NULL, ",");
+  switch (dataType) {
+    case 1 :
+      return conductivity;
+      break;
+    case 2 :
+      return salinity;
+      break;
+    }
+  }
+  if (addrSonde == addressPh) return reponse;
 }
 
 void errorLogger(String error){
@@ -133,7 +145,6 @@ void loop() {
   float temperatureEau = analogRead(capteurTemperatureEau); // Valeur en sortie du convertisseur A/N
   temperatureEau = 3.3/1023*temperatureEau*1000;      // Tension en mV à l'entrée du convertisseur
   temperatureEau = (0.0512*temperatureEau)-20.5128;         // Formule de calcul issue de la documentation technique
-  //modem.print(String(temperatureEau) + "/");
   dataTab.tempEau = temperatureEau;
   Serial.println(temperatureEau); //DEBUG
 
@@ -141,24 +152,23 @@ void loop() {
   float temperatureAir = analogRead(capteurTemperatureAir); // Valeur brute en sortie du convertisseur A/N
   temperatureAir = 3.3/1023*temperatureAir;           // Tension en V à l'entrée du convertisseur (règle de 3)
   temperatureAir =((temperatureAir*1000)-500)/10;     // Formule de calcul issue de la documentation technique
-  //modem.print(String(temperatureAir) + "/");
   dataTab.tempAir = temperatureAir;
   Serial.println(temperatureAir); //DEBUG
 
   int luminosite = analogRead(capteurLuminosite);    // Valeur en sortie du convertisseur A/N
-  //modem.print(String(luminosite) + "/");
   dataTab.Lum = luminosite;
   Serial.println(luminosite); //DEBUG
 
   //------ Commande carte Atlas EC ------//
-  String ec = requestSondeAtlas(addressEC);
-  //modem.print(ec + "/");
+  String ec = requestSondeAtlas(addressEC, 1);
+  String sal = requestSondeAtlas(addressEC,2);
   dataTab.Ec = ec.toInt();
+  dataTab.Sel = sal.toInt();
   Serial.println(ec); //DEBUG
+  Serial.println(sal); //DEBUG
 
   //------ Commande carte Atlas Ph ------//
-  String ph = requestSondeAtlas(addressPh);
-  //modem.print(ph + "/");
+  String ph = requestSondeAtlas(addressPh, 0);
   dataTab.pH = ph.toInt();
   Serial.println(ph); //DEBUG
 
@@ -168,7 +178,6 @@ void loop() {
   digitalWrite(TRIGGER_PIN, LOW);
   long measure = pulseIn(ECHO_PIN, HIGH, 25000UL);
   float distance_cm = (measure * 0.34 / 2.0)/ 10.0;
-  //modem.print(String(distance_cm));
   dataTab.hauteur = distance_cm;
   Serial.println(distance_cm); //DEBUG
 
@@ -197,6 +206,8 @@ void loop() {
     DataLog.print(luminosite);
     DataLog.print(";");
     DataLog.print(ec);
+    DataLog.print(";");
+    DataLog.print(sal);
     DataLog.print(";");
     DataLog.print(ph);
     DataLog.print(";");

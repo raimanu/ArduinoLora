@@ -10,6 +10,7 @@ struct tabData {
     int16_t tempAir;
     int16_t tempEau;
     int16_t Ec;
+    int16_t Sel;
     int16_t pH;
     int16_t Lum;
     int16_t hauteur;
