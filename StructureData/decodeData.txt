@@ -7,9 +7,10 @@ function Decode(fports, bytes, variables){
             decoded.tempAir = ((bytes[3]<<8)|bytes[2])/10.0;
             decoded.tempWater = ((bytes[5]<<8)|bytes[4])/10.0;
             decoded.ec = ((bytes[7]<<8)|bytes[6]);
-            decoded.pH = ((bytes[9]<<8)|bytes[8])/10.0;
-            decoded.lum = ((bytes[11]<<8)|bytes[10])/10.0;
-            decoded.height = ((bytes[13]<<8)|bytes[12]);
+            decoded.sel = ((bytes[9]<<8)|bytes[8])/10.0;
+            decoded.pH = ((bytes[11]<<8)|bytes[10])/10.0;
+            decoded.lum = ((bytes[13]<<8)|bytes[12]);
+            decoded.height = ((bytes[15]<<8)|bytes[14]);
             break;
     }
     return decoded;
