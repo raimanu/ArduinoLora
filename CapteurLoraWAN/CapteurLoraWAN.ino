@@ -163,7 +163,7 @@ void loop() {
 
   //------ Commande carte Atlas EC / Salinity ------//
   String ec = requestSondeAtlas(addressEC, 1);
-  String sal = requestSondeAtlas(addressEC,2);
+  String sal = requestSondeAtlas(addressEC, 2);
   dataTab.Ec = ec.toInt();
   dataTab.Sel = sal.toInt();
   Serial.println(ec); //DEBUG
@@ -216,19 +216,13 @@ void loop() {
     DateTime now = rtc.now();
     DataLog.print(String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()) + ';'));
     DataLog.print(String(String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second()) + ';'));
-    DataLog.print(temperatureEau);
-    DataLog.print(";");
-    DataLog.print(temperatureAir);
-    DataLog.print(";");
-    DataLog.print(luminosite);
-    DataLog.print(";");
-    DataLog.print(ec);
-    DataLog.print(";");
-    DataLog.print(sal);
-    DataLog.print(";");
-    DataLog.print(ph);
-    DataLog.print(";");
-    DataLog.println(distance/10);
+    String allData[7] = {String(temperatureEau),String(temperatureAir),String(luminosite),ec,sal,ph,String(distance)}; 
+    for (int i = 0; i < 7; i++)
+    {
+      DataLog.print(allData[i]);
+      DataLog.print(";");
+    }
+    DataLog.println();
     DataLog.close();     
   }
 
