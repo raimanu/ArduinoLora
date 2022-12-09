@@ -31,6 +31,8 @@ char reponse[48];    // réponse des sondes Atlas (48 octets)
 
 void setup() {
   Serial.begin(9600); //DEBUG
+  
+ Serial1.begin(9600); 
 
   /* Initialise Carte SD*/
   SD.begin(sdCardPinChipSelect);
@@ -159,7 +161,7 @@ void loop() {
   dataTab.Lum = luminosite;
   Serial.println(luminosite); //DEBUG
 
-  //------ Commande carte Atlas EC ------//
+  //------ Commande carte Atlas EC / Salinity ------//
   String ec = requestSondeAtlas(addressEC, 1);
   String sal = requestSondeAtlas(addressEC,2);
   dataTab.Ec = ec.toInt();
@@ -172,14 +174,29 @@ void loop() {
   dataTab.pH = ph.toInt();
   Serial.println(ph); //DEBUG
 
-  //------ Mesure distance capteur ultrasons -------//
-  digitalWrite(TRIGGER_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIGGER_PIN, LOW);
-  long measure = pulseIn(ECHO_PIN, HIGH, 25000UL);
-  float distance_cm = (measure * 0.34 / 2.0)/ 10.0;
-  dataTab.hauteur = distance_cm;
-  Serial.println(distance_cm); //DEBUG
+  //------ Mesure distance capteur ultrasons A01NYUB-------//
+  unsigned char data[4]={};
+  float distance;
+  do {
+    for(int i=0;i<4;i++) {
+      data[i]=Serial1.read();
+    }
+  }
+  while(Serial1.read()==0xff);
+  Serial1.flush();
+  if(data[0]==0xff) {
+    int sum;
+    sum=(data[0]+data[1]+data[2])&0x00FF;
+    if(sum==data[3]) {
+      distance=(data[1]<<8)+data[2]; 
+    }
+    else {
+      distance = 0;
+      Serial.println("ERROR"); //DEBUG
+    }
+  }
+  dataTab.hauteur = distance;
+  Serial.println(distance/10); //DEBUG
 
   //------ Transmission LoRaWAN ------//
   modem.write(dataTab);
@@ -211,7 +228,7 @@ void loop() {
     DataLog.print(";");
     DataLog.print(ph);
     DataLog.print(";");
-    DataLog.println(distance_cm);
+    DataLog.println(distance/10);
     DataLog.close();     
   }
 
