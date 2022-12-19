@@ -14,7 +14,7 @@ cursor = conn.cursor()
 # Preparing SQL queries to INSERT a record into the database.
 id_sensor = int(input("id_sensor ? : \n"))
 time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-type = input("type ? : \n")
+type = str(input("type ? : \n"))
 data  = float(input("data ? : \n"))
 
 values = (id_sensor,time, type, data)

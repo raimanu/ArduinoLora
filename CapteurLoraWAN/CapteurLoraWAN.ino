@@ -32,7 +32,7 @@ char reponse[48];    // réponse des sondes Atlas (48 octets)
 void setup() {
   Serial.begin(9600); //DEBUG
   
- Serial1.begin(9600); 
+  Serial1.begin(9600); 
 
   /* Initialise Carte SD*/
   SD.begin(sdCardPinChipSelect);
@@ -49,7 +49,7 @@ void setup() {
     Serial.println("Couldn't find RTC"); //DEBUG
     Serial.flush();
     errorLogger("Couldn't find RTC");
-    while (1) delay(10);
+    //while (1) delay(10);
   }
 
   if (! rtc.initialized() || rtc.lostPower()) {
@@ -147,14 +147,14 @@ void loop() {
   float temperatureEau = analogRead(capteurTemperatureEau); // Valeur en sortie du convertisseur A/N
   temperatureEau = 3.3/1023*temperatureEau*1000;      // Tension en mV à l'entrée du convertisseur
   temperatureEau = (0.0512*temperatureEau)-20.5128;         // Formule de calcul issue de la documentation technique
-  dataTab.tempEau = temperatureEau;
+  dataTab.tempEau = temperatureEau*100;
   Serial.println(temperatureEau); //DEBUG
 
   //------ Mesure temperature Air TMP36 ------//
   float temperatureAir = analogRead(capteurTemperatureAir); // Valeur brute en sortie du convertisseur A/N
   temperatureAir = 3.3/1023*temperatureAir;           // Tension en V à l'entrée du convertisseur (règle de 3)
   temperatureAir =((temperatureAir*1000)-500)/10;     // Formule de calcul issue de la documentation technique
-  dataTab.tempAir = temperatureAir;
+  dataTab.tempAir = temperatureAir*100;
   Serial.println(temperatureAir); //DEBUG
 
   int luminosite = analogRead(capteurLuminosite);    // Valeur en sortie du convertisseur A/N
@@ -181,8 +181,7 @@ void loop() {
     for(int i=0;i<4;i++) {
       data[i]=Serial1.read();
     }
-  }
-  while(Serial1.read()==0xff);
+  } while(Serial1.read()==0xff);
   Serial1.flush();
   if(data[0]==0xff) {
     int sum;
@@ -192,6 +191,8 @@ void loop() {
     }
     else {
       distance = 0;
+      Serial.println("sum " + sum); //DEBUG
+      Serial.println("data " + data[3]); //DEBUG
       Serial.println("ERROR"); //DEBUG
     }
   }
@@ -217,8 +218,7 @@ void loop() {
     DataLog.print(String(String(now.day()) + '/' + String(now.month()) + '/' + String(now.year()) + ';'));
     DataLog.print(String(String(now.hour()) + ':' + String(now.minute())+ ':' + String(now.second()) + ';'));
     String allData[7] = {String(temperatureEau),String(temperatureAir),String(luminosite),ec,sal,ph,String(distance)}; 
-    for (int i = 0; i < 7; i++)
-    {
+    for (int i = 0; i < 7; i++) {
       DataLog.print(allData[i]);
       DataLog.print(";");
     }
@@ -234,4 +234,3 @@ void loop() {
   //setup();
   delay(2000*60);
 }
-
