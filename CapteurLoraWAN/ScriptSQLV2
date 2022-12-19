@@ -2,20 +2,20 @@ DROP TABLE IF EXISTS "Sensor" CASCADE;
 DROP TABLE IF EXISTS "Data" CASCADE;
 
 CREATE TABLE IF NOT EXISTS "Sensor" (
-	"id_sensor" INT NOT NULL,
-	"devUi" INT NOT NULL,
+	"id_sensor" TEXT NOT NULL,
+	"devUi" TEXT NOT NULL,
 	CONSTRAINT "Sensor_pk" PRIMARY KEY ("id_sensor")
 );
 
 CREATE TABLE IF NOT EXISTS "Data" (
-	"id_sensor" INT NOT NULL,
+	"id_sensor" TEXT NOT NULL,
 	"time" TIMESTAMP NOT NULL,
 	"type" TEXT NOT NULL,
 	"data" FLOAT NOT NULL,
 	CONSTRAINT "Data_pk" PRIMARY KEY ("id_sensor","time","type"),
     CONSTRAINT "Data_fk0" FOREIGN KEY ("id_sensor") REFERENCES "Sensor"("id_sensor")
 );
-
+/*
 INSERT INTO "Sensor" VALUES (01, 150);
 INSERT INTO "Sensor" VALUES (02, 155);
 
@@ -30,3 +30,4 @@ INSERT INTO "Data" VALUES (01,'2022-12-08 10:24:26','tempEau',25.2);
 INSERT INTO "Data" VALUES (01,'2022-12-08 10:28:35','tempEau',29.5);
 INSERT INTO "Data" VALUES (01,'2022-12-08 10:32:02','tempEau',28.2);
 INSERT INTO "Data" VALUES (01,'2022-12-08 10:36:18','tempEau',23.2);
+*/
