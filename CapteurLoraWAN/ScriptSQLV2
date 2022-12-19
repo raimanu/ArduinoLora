@@ -2,18 +2,18 @@ DROP TABLE IF EXISTS "Sensor" CASCADE;
 DROP TABLE IF EXISTS "Data" CASCADE;
 
 CREATE TABLE IF NOT EXISTS "Sensor" (
-	"id_sensor" TEXT NOT NULL,
-	"devUi" TEXT NOT NULL,
-	CONSTRAINT "Sensor_pk" PRIMARY KEY ("id_sensor")
+	"devEUI" TEXT NOT NULL,
+	"deviceName" TEXT NOT NULL,
+	CONSTRAINT "Sensor_pk" PRIMARY KEY ("devEUI")
 );
 
 CREATE TABLE IF NOT EXISTS "Data" (
-	"id_sensor" TEXT NOT NULL,
+	"devEUI" TEXT NOT NULL,
 	"time" TIMESTAMP NOT NULL,
 	"type" TEXT NOT NULL,
 	"data" FLOAT NOT NULL,
-	CONSTRAINT "Data_pk" PRIMARY KEY ("id_sensor","time","type"),
-    CONSTRAINT "Data_fk0" FOREIGN KEY ("id_sensor") REFERENCES "Sensor"("id_sensor")
+	CONSTRAINT "Data_pk" PRIMARY KEY ("devEUI","time","type"),
+    CONSTRAINT "Data_fk0" FOREIGN KEY ("devEUI") REFERENCES "Sensor"("devEUI")
 );
 /*
 INSERT INTO "Sensor" VALUES (01, 150);
