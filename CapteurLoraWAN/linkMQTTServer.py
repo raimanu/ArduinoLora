@@ -39,8 +39,9 @@ def addData(trameLora) :
         time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         dictData = trameLora["object"]
         for type, data in dictData.items():
-                values = (devEUI,time, type, data)
-                cursor.execute('''INSERT INTO "Data"("devEUI", "time", "type", "data") VALUES (%s, %s, %s, %s)''', values)
+                if (type != 'protversion') :
+                        values = (devEUI,time, type, data)
+                        cursor.execute('''INSERT INTO "Data"("devEUI", "time", "type", "data") VALUES (%s, %s, %s, %s)''', values)
         print("All data added with Sucess")
         conn.commit()
         conn.close()
