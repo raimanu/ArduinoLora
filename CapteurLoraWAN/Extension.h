@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <ArduinoLowPower.h>
 #include <RTClib.h>
+#include <SPI.h>
 #include <SD.h>
 
 

@@ -1,5 +1,6 @@
 #include "Extension.h"
 #include "Key.h"
+#include <SPI.h>
 
 #define addressEC 100   // adresse I2C EC Conductivite
 #define addressPh 99    // adresse I2C Ph
@@ -14,12 +15,12 @@ const int capteurTemperatureEau = A0;   // temperature de l'eau : A0
 const int capteurTemperatureAir = A1;   // temperature de l'air TMP36 : A1
 const int capteurLuminosite = A2;       // luminosité : A2
 
-// Capteur ULtrasons broche Trigg et Echo
-const byte TRIGGER_PIN = 2;
-const byte ECHO_PIN = 3;
+// Variables capteur ultrasons
+unsigned char data[4]={};
+float distance;
 
 // Variables utilisées pour la carte SD
-const int   sdCardPinChipSelect = 6;
+const int sdCardPinChipSelect = 4;
 File DataLog;
 File ErrorLog;
 
@@ -30,7 +31,7 @@ byte codeError = 0;       // code erreur sondes Atlas
 char reponse[48];    // réponse des sondes Atlas (48 octets)
 
 void setup() {
-  Serial.begin(9600); //DEBUG
+  Serial.begin(57600); //DEBUG
   
   Serial1.begin(9600); 
 
@@ -56,11 +57,6 @@ void setup() {
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
    }
   rtc.start();
-
-  /* Initialise les broches */
-  pinMode(TRIGGER_PIN, OUTPUT);
-  digitalWrite(TRIGGER_PIN, LOW);
-  pinMode(ECHO_PIN, INPUT);
 
   //------- Connection au réseau LoraWan UNC
   if (!modem.begin(EU868)) {
@@ -175,29 +171,31 @@ void loop() {
   Serial.println(ph); //DEBUG
 
   //------ Mesure distance capteur ultrasons A01NYUB-------//
-  unsigned char data[4]={};
-  float distance;
-  do {
-    for(int i=0;i<4;i++) {
+  distance = 0;
+  while (distance == 0){
+      do {
+        for(int i=0;i<4;i++)
+        {
       data[i]=Serial1.read();
-    }
+      }
   } while(Serial1.read()==0xff);
+
   Serial1.flush();
+
+  //Serial.print("data[0] ="); //DEBUG
+  //Serial.println(data[0]); //DEBUG
+
   if(data[0]==0xff) {
-    int sum;
-    sum=(data[0]+data[1]+data[2])&0x00FF;
-    if(sum==data[3]) {
-      distance=(data[1]<<8)+data[2]; 
-    }
-    else {
-      distance = 0;
-      Serial.println("sum " + sum); //DEBUG
-      Serial.println("data " + data[3]); //DEBUG
-      Serial.println("ERROR"); //DEBUG
-    }
-  }
+      int sum;
+      sum=(data[0]+data[1]+data[2])&0x00FF;
+      if(sum==data[3]) {
+        distance=(data[1]<<8)+data[2];
+      }
+     }
+      delay(150);
+     }
   dataTab.hauteur = distance;
-  Serial.println(distance/10); //DEBUG
+  Serial.println("distance = " + String(distance/10)); //DEBUG
 
   //------ Transmission LoRaWAN ------//
   modem.write(dataTab);

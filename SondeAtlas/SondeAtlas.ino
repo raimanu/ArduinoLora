@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <MKRWAN.h>
 
-#define address 100   // adresse I2C EC Conductivite
+#define address 100 // adresse I2C EC Conductivite
 
 char computerdata[32];           //we make a 32 byte character array to hold incoming data from a pc/mac/other.
 byte received_from_computer = 0; //we need to know how many characters have been received.
@@ -36,7 +36,7 @@ void loop() {
   if (Serial.available()) {     
     Serial.println("Command Send");  
     received_from_computer = Serial.readBytesUntil(13, computerdata, 32);
-    computerdata[received_from_computer-1] = 0;
+    computerdata[received_from_computer] = 0;
     for (i = 0; i <= received_from_computer; i++) {     
       computerdata[i] = tolower(computerdata[i]);
     }
