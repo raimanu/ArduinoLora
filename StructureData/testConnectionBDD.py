@@ -3,8 +3,8 @@ from datetime import datetime
 
 #establishing the connection
 conn = psycopg2.connect(
-   database="bddLoRaV2", user='postgres', password='admin', host='127.0.0.1', port= '5432'
-)
+   database="bddLoRaV2", user="postgres", password="admin", host="127.0.0.1", port= "5432"
+   )
 #Setting auto commit false
 conn.autocommit = True
 
@@ -19,7 +19,7 @@ data  = float(input("data ? : \n"))
 
 values = (id_sensor,time, type, data)
 
-cursor.execute('''INSERT INTO "Data"("id_sensor", "time", "type", "data") VALUES (%s, %s, %s, %s)''', values)
+cursor.execute('''INSERT INTO "Data"("devEUI", "time", "type", "data") VALUES (%s, %s, %s, %s)''', values)
 
 
 # Commit your changes in the database
